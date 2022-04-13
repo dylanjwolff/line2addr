@@ -42,6 +42,8 @@ def display_file_line(filename, lineno, lines):
     referenced_files = {pair[1]:(pair[0],pair[1]) for pair in lines}
     bf = os.path.basename(filename)
     reffile = referenced_files.get(bf, None)
+    print(f"refile {reffile}")
+
     if reffile:
         for line, addr in lines[reffile][lineno]:
             print(hex(addr))
@@ -117,7 +119,41 @@ def normalize_hex(hexstring):
         hs = hexstring[1:]
     return int(hs, 16)
 
-def main():
+def get_binary_lines(binary, base_addr="0x0"):
+    base_address = normalize_hex(base_addr)
+
+    with open(binary, "rb") as binary:
+        lines = get_lines(binary, base_address)
+    return lines
+
+
+
+def get_file_line(filename, lineno, binary, bin_lines=None, base_addr="0x0"):
+    lineno = int(lineno)
+    lines = bin_lines
+
+    if lines is None:
+        base_address = normalize_hex(base_addr)
+
+        with open(binary, "rb") as binary:
+            lines = get_lines(binary, base_address)
+
+    # Also needs to be fixed here
+    referenced_files = {pair[1]:(pair[0],pair[1]) for pair in lines}
+    bf = os.path.basename(filename)
+    reffile = referenced_files.get(bf, None)
+
+    addrs = []
+    if reffile:
+        for line, addr in lines[reffile][lineno]:
+            print(hex(addr))
+            addrs.append(hex(addr))
+        return addrs
+    else:
+        print("{} is not references in the executable".format(filename))
+
+
+def cli():
     parser = argparse.ArgumentParser()
     parser.add_argument("--binary", "-b", required=True,
         help="binary to resolve addresses for")
@@ -160,4 +196,6 @@ def main():
             fullpath = os.path.join(options.directory, fullsrcpath)
             print(green(fullpath + ":"))
             display_file(fullpath, lines, display_options)
-main()
+
+if __name__ == "__main__":
+    cli()
